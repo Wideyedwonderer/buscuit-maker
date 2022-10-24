@@ -48,16 +48,17 @@ export class BiscuitMachineService {
   }
 
   async turnOn() {
-    if (this.machineState !== MachineStates.OFF) {
-      throw new Error("Machine is currently not off, can't turn on.");
+    if (this.machineState === MachineStates.ON) {
+      throw new Error('Machine is already turned on.');
     }
     await this.heatOven(this.DESIRED_OVEN_TEMPERATURE);
 
     if (this.motorState !== MotorStates.ON) {
-      await this.turnOnMotor();
+      this.turnOnMotor();
     }
-
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_ON);
+    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_PAUSED, false);
+    this.machineState = MachineStates.ON;
+    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_ON, true);
   }
 
   private async heatOven(desiredTemperature: number) {
@@ -73,7 +74,7 @@ export class BiscuitMachineService {
         this.ovenTemperature,
       );
     }
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.OVEN_HEATED);
+    this.biscuitGateway.emitEvent(BuscuitMachineEvents.OVEN_HEATED, true);
     return;
   }
   async turnOff() {
@@ -83,6 +84,9 @@ export class BiscuitMachineService {
     await this.turnOffMotor();
     await this.terminateConveyor();
     await this.turnOffOven();
+    this.machineState = MachineStates.OFF;
+    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_ON, false);
+    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_PAUSED, false);
   }
 
   async pause() {
@@ -90,6 +94,9 @@ export class BiscuitMachineService {
       throw new Error('Machine should be ON, in order to pause.');
     }
     await this.turnOffMotor();
+    this.machineState = MachineStates.PAUSED;
+    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_ON, false);
+    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_PAUSED, true);
   }
 
   private async turnOffOven() {
@@ -100,13 +107,14 @@ export class BiscuitMachineService {
         BuscuitMachineEvents.OVEN_TEMPERATURE_CHANGE,
         this.ovenTemperature,
       );
+      this.machineState = MachineStates.OFF;
     }
     return;
   }
 
   private async turnOnMotor() {
     this.motorState = MotorStates.ON;
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MOTOR_ON);
+    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MOTOR_ON, true);
     while (this.motorState === MotorStates.ON) {
       await delay(this.MOTOR_PULSE_DURATION_SECONDS);
       await this.pulse();
@@ -117,9 +125,7 @@ export class BiscuitMachineService {
 
   private async turnOffMotor() {
     this.motorState = MotorStates.OFF;
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MOTOR_OFF);
-    // ?
-    // await delay(1.1);
+    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MOTOR_ON, false);
   }
 
   private pulse() {

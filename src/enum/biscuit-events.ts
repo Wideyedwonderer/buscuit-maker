@@ -1,8 +1,10 @@
 export enum BuscuitMachineEvents {
   // General
   MACHINE_ON = 'MACHINE_ON',
+
+  MACHINE_PAUSED = 'MACHINE_PAUSED',
+
   MOTOR_ON = 'MOTOR_ON',
-  MOTOR_OFF = 'MOTOR_OFF',
 
   // Oven
   OVEN_TEMPERATURE_CHANGE = 'OVEN_TEMPERATURE_CNAHGE',

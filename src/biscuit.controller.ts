@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { BiscuitMachineService } from './biscuit-machine.service';
 import { SwitchStateDto } from './dto/switch-state.dto';
 import { MachineStates } from './enum/machine-states.enum';
@@ -10,7 +10,6 @@ export class BiscuitController {
   @Post()
   @HttpCode(200)
   switch(@Body() { newState }: SwitchStateDto): void {
-    console.log(newState);
     if (newState === MachineStates.ON) {
       this.biscuitService.turnOn();
     } else if (newState === MachineStates.OFF) {

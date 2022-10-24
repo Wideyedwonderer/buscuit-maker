@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { time } from 'console';
 import { BiscuitGateway } from './biscuit-gateway';
-import { BuscuitMachineEvents } from './enum/biscuit-events';
+import { BiscuitMachineEvents } from './enum/biscuit-events';
 import { MachineStates } from './enum/machine-states.enum';
 import { MotorStates } from './enum/motor-states.enum';
 import { delay } from './utils';
@@ -56,9 +55,9 @@ export class BiscuitMachineService {
     if (this.motorState !== MotorStates.ON) {
       this.turnOnMotor();
     }
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_PAUSED, false);
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, false);
     this.machineState = MachineStates.ON;
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_ON, true);
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, true);
   }
 
   private async heatOven(desiredTemperature: number) {
@@ -70,11 +69,11 @@ export class BiscuitMachineService {
       await delay(1);
       this.ovenTemperature += this.OVEN_WARMUP_DEGREES_PER_SECOND;
       this.biscuitGateway.emitEvent(
-        BuscuitMachineEvents.OVEN_TEMPERATURE_CHANGE,
+        BiscuitMachineEvents.OVEN_TEMPERATURE_CHANGE,
         this.ovenTemperature,
       );
     }
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.OVEN_HEATED, true);
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.OVEN_HEATED, true);
     return;
   }
   async turnOff() {
@@ -85,8 +84,8 @@ export class BiscuitMachineService {
     await this.terminateConveyor();
     await this.turnOffOven();
     this.machineState = MachineStates.OFF;
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_ON, false);
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_PAUSED, false);
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, false);
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, false);
   }
 
   async pause() {
@@ -95,8 +94,8 @@ export class BiscuitMachineService {
     }
     await this.turnOffMotor();
     this.machineState = MachineStates.PAUSED;
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_ON, false);
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MACHINE_PAUSED, true);
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, false);
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, true);
   }
 
   private async turnOffOven() {
@@ -104,7 +103,7 @@ export class BiscuitMachineService {
       await delay(1);
       this.ovenTemperature -= this.OVEN_COOL_DOWN_DEGREES_PER_SECOND;
       this.biscuitGateway.emitEvent(
-        BuscuitMachineEvents.OVEN_TEMPERATURE_CHANGE,
+        BiscuitMachineEvents.OVEN_TEMPERATURE_CHANGE,
         this.ovenTemperature,
       );
       this.machineState = MachineStates.OFF;
@@ -114,7 +113,7 @@ export class BiscuitMachineService {
 
   private async turnOnMotor() {
     this.motorState = MotorStates.ON;
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MOTOR_ON, true);
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MOTOR_ON, true);
     while (this.motorState === MotorStates.ON) {
       await delay(this.MOTOR_PULSE_DURATION_SECONDS);
       await this.pulse();
@@ -125,7 +124,7 @@ export class BiscuitMachineService {
 
   private async turnOffMotor() {
     this.motorState = MotorStates.OFF;
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.MOTOR_ON, false);
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MOTOR_ON, false);
   }
 
   private pulse() {
@@ -145,7 +144,7 @@ export class BiscuitMachineService {
     } else {
       this.lastCookiePosition = 0;
     }
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.COOKIES_MOVED, {
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.COOKIES_MOVED, {
       lastCookiePosition: this.lastCookiePosition,
       firstCookiePosition: this.firstCookiePosition,
     });
@@ -159,7 +158,7 @@ export class BiscuitMachineService {
     if (this.firstCookiePosition === this.CONVEYOR_LENGTH - 1) {
       this.cookedCookiesAmount += 1;
       this.biscuitGateway.emitEvent(
-        BuscuitMachineEvents.COOKIE_COOKED,
+        BiscuitMachineEvents.COOKIE_COOKED,
         this.cookedCookiesAmount,
       );
     } else {
@@ -167,7 +166,7 @@ export class BiscuitMachineService {
     }
 
     this.lastCookiePosition += 1;
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.COOKIES_MOVED, {
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.COOKIES_MOVED, {
       lastCookiePosition: this.lastCookiePosition,
       firstCookiePosition: this.firstCookiePosition,
     });
@@ -181,7 +180,7 @@ export class BiscuitMachineService {
     this.lastCookiePosition = -1;
     this.firstCookiePosition = -1;
 
-    this.biscuitGateway.emitEvent(BuscuitMachineEvents.COOKIES_MOVED, {
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.COOKIES_MOVED, {
       lastCookiePosition: this.lastCookiePosition,
       firstCookiePosition: this.firstCookiePosition,
     });

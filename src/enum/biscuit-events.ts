@@ -1,4 +1,4 @@
-export enum BuscuitMachineEvents {
+export enum BiscuitMachineEvents {
   // General
   MACHINE_ON = 'MACHINE_ON',
 

@@ -1,5 +1,5 @@
 import { IsEnum } from 'class-validator';
-import { MachineStates } from 'src/enum/machine-states.enum';
+import { MachineStates } from '../enum/machine-states.enum';
 
 export class SwitchStateDto {
   @IsEnum(MachineStates)

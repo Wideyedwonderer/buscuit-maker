@@ -5,7 +5,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { BuscuitMachineEvents } from './enum/biscuit-events';
+import { BiscuitMachineEvents } from './enum/biscuit-events';
 
 @WebSocketGateway({ namespace: '/biscuit', cors: true })
 export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
@@ -21,7 +21,7 @@ export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
     // server.
     console.log('Websocket Gateway initialized!');
   }
-  emitEvent(event: BuscuitMachineEvents, value?: any) {
+  emitEvent(event: BiscuitMachineEvents, value?: any) {
     this.latestEvents.set(event, value);
     this.wss.emit(event, value);
   }

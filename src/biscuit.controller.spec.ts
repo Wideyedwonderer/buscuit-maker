@@ -1,17 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BiscuitController } from './biscuit.controller';
 import { BiscuitMachineService } from './biscuit-machine.service';
 
-describe('BiscuitController', () => {
-  let biscuitController: BiscuitController;
+describe('BiscuitMachineService', () => {
+  let biscuitService: BiscuitMachineService;
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
-      controllers: [BiscuitController],
+      controllers: [],
       providers: [BiscuitMachineService],
     }).compile();
 
-    biscuitController = app.get<BiscuitController>(BiscuitController);
+    biscuitService = app.get<BiscuitMachineService>(BiscuitMachineService);
   });
 
   describe('root', () => {

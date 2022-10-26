@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { config } from 'dotenv';
 import { BiscuitGateway } from './biscuit-gateway';
 import { BiscuitMachineEvents } from './enum/biscuit-events';
 import { MachineStates } from './enum/machine-states.enum';
 import { MotorStates } from './enum/motor-states.enum';
+import { ErrorMessages } from './errors/error-messages';
 import { delay } from './utils';
 
 @Injectable()
@@ -11,10 +13,12 @@ export class BiscuitMachineService {
   private readonly CONVEYOR_LENGTH;
   private readonly OVEN_LENGTH;
   private readonly OVEN_POSITION;
-  private readonly OVEN_WARMUP_DEGREES_PER_SECOND;
-  private readonly OVEN_COOL_DOWN_DEGREES_PER_SECOND;
-  private readonly DESIRED_OVEN_TEMPERATURE;
+  private readonly OVEN_WARMUP_DEGREES_PER_PERIOD;
+  private readonly OVEN_COOL_DOWN_DEGREES_PER_PERIOD;
+  private readonly DESIRED_MININUM_OVEN_TEMPERATURE;
+  private readonly DESIRED_MAXIMUM_OVEN_TEMPERATURE;
   private readonly MOTOR_PULSE_DURATION_SECONDS;
+  private readonly OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS;
 
   private machineState: MachineStates = MachineStates.OFF;
   private motorState = MotorStates.OFF;
@@ -24,25 +28,34 @@ export class BiscuitMachineService {
   private lastCookiePosition = -1;
   private cookedCookiesAmount = 0;
 
+  private ovenHeating = false;
+  private ovenCooling = false;
+  private turningOff = false;
   constructor(
     private readonly configService: ConfigService,
     private biscuitGateway: BiscuitGateway,
   ) {
     // TODO: validate
-    this.CONVEYOR_LENGTH = configService.get('CONVEYOR_LENGTH');
-    this.OVEN_LENGTH = configService.get('OVEN_LENGTH');
-    this.OVEN_POSITION = configService.get('OVEN_POSITION');
-    this.OVEN_WARMUP_DEGREES_PER_SECOND = configService.get(
-      'OVEN_WARMUP_DEGREES_PER_SECOND',
+    this.CONVEYOR_LENGTH = +configService.get('CONVEYOR_LENGTH');
+    this.OVEN_LENGTH = +configService.get('OVEN_LENGTH');
+    this.OVEN_POSITION = +configService.get('OVEN_POSITION');
+    this.OVEN_WARMUP_DEGREES_PER_PERIOD = +configService.get(
+      'OVEN_WARMUP_DEGREES_PER_PERIOD',
     );
-    this.OVEN_COOL_DOWN_DEGREES_PER_SECOND = configService.get(
-      'OVEN_COOL_DOWN_DEGREES_PER_SECOND',
+    this.OVEN_COOL_DOWN_DEGREES_PER_PERIOD = +configService.get(
+      'OVEN_COOL_DOWN_DEGREES_PER_PERIOD',
     );
-    this.DESIRED_OVEN_TEMPERATURE = configService.get(
-      'DESIRED_OVEN_TEMPERATURE',
+    this.DESIRED_MININUM_OVEN_TEMPERATURE = +configService.get(
+      'DESIRED_MININUM_OVEN_TEMPERATURE',
     );
-    this.MOTOR_PULSE_DURATION_SECONDS = configService.get(
+    this.DESIRED_MAXIMUM_OVEN_TEMPERATURE = +configService.get(
+      'DESIRED_MAXIMUM_OVEN_TEMPERATURE',
+    );
+    this.MOTOR_PULSE_DURATION_SECONDS = +configService.get(
       'MOTOR_PULSE_DURATION_SECONDS',
+    );
+    this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS = +configService.get(
+      'OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS',
     );
   }
 
@@ -50,39 +63,58 @@ export class BiscuitMachineService {
     if (this.machineState === MachineStates.ON) {
       throw new Error('Machine is already turned on.');
     }
-    await this.heatOven(this.DESIRED_OVEN_TEMPERATURE);
+    await this.heatOven();
 
-    if (this.motorState !== MotorStates.ON) {
-      this.turnOnMotor();
+    if (!this.turningOff) {
+      if (this.motorState !== MotorStates.ON) {
+        this.turnOnMotor();
+      }
+      this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, false);
+      this.machineState = MachineStates.ON;
+      this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, true);
+    } else {
+      this.turningOff = false;
     }
-    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, false);
-    this.machineState = MachineStates.ON;
-    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, true);
   }
 
-  private async heatOven(desiredTemperature: number) {
-    if (this.ovenTemperature >= desiredTemperature) {
+  private async heatOven() {
+    if (this.ovenTemperature >= this.DESIRED_MININUM_OVEN_TEMPERATURE) {
       return;
     }
-
-    while (this.ovenTemperature < desiredTemperature) {
-      await delay(1);
-      this.ovenTemperature += this.OVEN_WARMUP_DEGREES_PER_SECOND;
+    this.ovenHeating = true;
+    while (
+      this.ovenTemperature < this.DESIRED_MININUM_OVEN_TEMPERATURE &&
+      !this.ovenCooling
+    ) {
+      await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS);
+      const newOvenTemp = Math.min(
+        this.DESIRED_MAXIMUM_OVEN_TEMPERATURE,
+        this.ovenTemperature + this.OVEN_WARMUP_DEGREES_PER_PERIOD,
+      );
+      this.ovenTemperature = newOvenTemp;
       this.biscuitGateway.emitEvent(
         BiscuitMachineEvents.OVEN_TEMPERATURE_CHANGE,
         this.ovenTemperature,
       );
     }
+    this.ovenHeating = false;
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.OVEN_HEATED, true);
     return;
   }
   async turnOff() {
+    this.turningOff = true;
+    if (this.ovenHeating) {
+      await this.turnOffOven();
+    }
     if (this.machineState === MachineStates.OFF) {
-      throw new Error('Machine is already turned off.');
+      this.biscuitGateway.emitEvent(
+        BiscuitMachineEvents.ERROR,
+        ErrorMessages.MACHINE_IS_ALREADY_OFF,
+      );
+      return;
     }
     await this.turnOffMotor();
     await this.terminateConveyor();
-    await this.turnOffOven();
     this.machineState = MachineStates.OFF;
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, false);
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, false);
@@ -90,7 +122,11 @@ export class BiscuitMachineService {
 
   async pause() {
     if (this.machineState !== MachineStates.ON) {
-      throw new Error('Machine should be ON, in order to pause.');
+      this.biscuitGateway.emitEvent(
+        BiscuitMachineEvents.ERROR,
+        ErrorMessages.CANT_PAUSE_MACHINE_NOT_ON,
+      );
+      return;
     }
     await this.turnOffMotor();
     this.machineState = MachineStates.PAUSED;
@@ -99,15 +135,24 @@ export class BiscuitMachineService {
   }
 
   private async turnOffOven() {
+    this.ovenCooling = true;
+
+    if (this.ovenHeating) {
+      await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS);
+    }
     while (this.ovenTemperature >= 0) {
-      await delay(1);
-      this.ovenTemperature -= this.OVEN_COOL_DOWN_DEGREES_PER_SECOND;
+      await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS);
+      const newTemperature =
+        this.ovenTemperature - this.OVEN_COOL_DOWN_DEGREES_PER_PERIOD;
+      this.ovenTemperature = newTemperature > 0 ? newTemperature : 0;
       this.biscuitGateway.emitEvent(
         BiscuitMachineEvents.OVEN_TEMPERATURE_CHANGE,
         this.ovenTemperature,
       );
       this.machineState = MachineStates.OFF;
     }
+    this.ovenCooling = false;
+
     return;
   }
 
@@ -175,7 +220,7 @@ export class BiscuitMachineService {
   private async terminateConveyor() {
     while (this.lastCookiePosition < this.CONVEYOR_LENGTH) {
       this.moveConveyor();
-      await delay(1);
+      await delay(this.MOTOR_PULSE_DURATION_SECONDS);
     }
     this.lastCookiePosition = -1;
     this.firstCookiePosition = -1;

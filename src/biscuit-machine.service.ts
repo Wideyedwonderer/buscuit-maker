@@ -34,7 +34,6 @@ export class BiscuitMachineService {
     private readonly configService: ConfigService,
     private biscuitGateway: BiscuitGateway,
   ) {
-    // TODO: validate
     this.CONVEYOR_LENGTH = +configService.get('CONVEYOR_LENGTH');
     this.OVEN_LENGTH = +configService.get('OVEN_LENGTH');
     this.OVEN_POSITION = +configService.get('OVEN_POSITION');

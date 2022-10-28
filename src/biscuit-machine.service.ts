@@ -74,12 +74,14 @@ export class BiscuitMachineService {
     }
     await this.heatOven();
 
-    if (this.motorState !== MotorStates.ON) {
-      this.turnOnMotor();
+    if (!this.turningOff) {
+      if (this.motorState !== MotorStates.ON) {
+        this.turnOnMotor();
+      }
+      this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, false);
+      this.machineState = MachineStates.ON;
+      this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, true);
     }
-    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, false);
-    this.machineState = MachineStates.ON;
-    this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, true);
   }
 
   private async heatOven() {
@@ -103,15 +105,15 @@ export class BiscuitMachineService {
       );
     }
     this.ovenHeating = false;
-    this.biscuitGateway.emitEvent(BiscuitMachineEvents.OVEN_HEATED, true);
+    if (!this.ovenCooling) {
+      this.biscuitGateway.emitEvent(BiscuitMachineEvents.OVEN_HEATED, true);
+    }
     return;
   }
   async turnOff() {
     this.turningOff = true;
-    if (this.ovenHeating) {
-      await this.turnOffOven();
-    }
-    if (this.machineState === MachineStates.OFF) {
+
+    if (this.machineState === MachineStates.OFF && !this.ovenHeating) {
       this.biscuitGateway.emitEvent(
         BiscuitMachineEvents.ERROR,
         ErrorMessages.MACHINE_IS_ALREADY_OFF,
@@ -119,7 +121,9 @@ export class BiscuitMachineService {
       return;
     }
 
-    await this.turnOffMotor(true);
+    if (this.machineState !== MachineStates.OFF) {
+      await this.turnOffMotor(true);
+    }
 
     await this.turnOffOven();
 
@@ -156,7 +160,7 @@ export class BiscuitMachineService {
     if (this.ovenHeating) {
       await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS);
     }
-    while (this.ovenTemperature >= 0) {
+    while (this.ovenTemperature > 0) {
       await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS);
       const newTemperature =
         this.ovenTemperature - this.OVEN_COOL_DOWN_DEGREES_PER_PERIOD;
@@ -168,6 +172,7 @@ export class BiscuitMachineService {
       this.machineState = MachineStates.OFF;
     }
     this.ovenCooling = false;
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.OVEN_HEATED, false);
 
     return;
   }

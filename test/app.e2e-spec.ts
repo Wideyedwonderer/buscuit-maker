@@ -20,6 +20,7 @@ describe('Biscuit Machine (e2e)', () => {
 
     process.env.DESIRED_MININUM_OVEN_TEMPERATURE = '220';
     process.env.DESIRED_MAXIMUM_OVEN_TEMPERATURE = '240';
+    process.env.PORT = '3010';
     process.env.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS =
       OVEN_NEW_SPEED_PERIOD + '';
     process.env.MOTOR_PULSE_DURATION_SECONDS = MOTOR_NEW_PULSE_DURATION + '';

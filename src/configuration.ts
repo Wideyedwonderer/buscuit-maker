@@ -11,7 +11,7 @@ export default async () => {
     DESIRED_MININUM_OVEN_TEMPERATURE: Joi.number().min(120).required(),
     DESIRED_MAXIMUM_OVEN_TEMPERATURE: Joi.number().max(260).required(),
     MOTOR_PULSE_DURATION_SECONDS: Joi.number().min(0.1).required(),
-    PORT: Joi.number().min(0.1).required(),
+    PORT: Joi.number().min(1000).required(),
   });
 
   const config = {
@@ -32,7 +32,7 @@ export default async () => {
       +process.env.DESIRED_MAXIMUM_OVEN_TEMPERATURE || 240,
     MOTOR_PULSE_DURATION_SECONDS:
       +process.env.MOTOR_PULSE_DURATION_SECONDS || 2,
-    PORT: +process.env.MOTOR_PULSE_DURATION_SECONDS || 3001,
+    PORT: process.env.PORT || 3001,
   };
   const error = schema.validate(config).error;
 

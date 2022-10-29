@@ -20,6 +20,7 @@ describe('Biscuit Machine (e2e)', () => {
 
     process.env.DESIRED_MININUM_OVEN_TEMPERATURE = '220';
     process.env.DESIRED_MAXIMUM_OVEN_TEMPERATURE = '240';
+    process.env.PORT = '3010';
     process.env.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS =
       OVEN_NEW_SPEED_PERIOD + '';
     process.env.MOTOR_PULSE_DURATION_SECONDS = MOTOR_NEW_PULSE_DURATION + '';
@@ -197,13 +198,13 @@ describe('Biscuit Machine (e2e)', () => {
     await delay(OVEN_NEW_SPEED_PERIOD * 3);
     await delay(MOTOR_NEW_PULSE_DURATION * 2);
     socket.emit(BiscuitMachineEvents.PAUSE_MACHINE);
-    await delay(MOTOR_NEW_PULSE_DURATION * 1);
+    await delay(MOTOR_NEW_PULSE_DURATION * 2);
 
     const cookieMovedEvents = events.filter(
       (x) => x.event === BiscuitMachineEvents.COOKIES_MOVED,
     );
 
-    expect(cookieMovedEvents.length).toEqual(4);
+    expect(cookieMovedEvents.length).toEqual(6);
     const lastCookieMovedIndex = events.findIndex(
       (x) => x.args?.firstCookiePosition === 2,
     );

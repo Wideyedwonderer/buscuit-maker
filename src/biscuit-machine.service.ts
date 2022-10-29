@@ -31,7 +31,7 @@ export class BiscuitMachineService {
   private ovenCooling = false;
   private turningOff = false;
   private turningOn = false;
-
+  private pausing = false;
   constructor(
     private readonly configService: ConfigService,
     private biscuitGateway: BiscuitGateway,
@@ -155,11 +155,20 @@ export class BiscuitMachineService {
   }
 
   async pause() {
+    if (this.pausing) {
+      this.biscuitGateway.emitEvent(
+        BiscuitMachineEvents.ERROR,
+        ErrorMessages.ALREADY_PAUSING,
+      );
+      return;
+    }
+    this.pausing = true;
     if (this.machineState !== MachineStates.ON) {
       this.biscuitGateway.emitEvent(
         BiscuitMachineEvents.ERROR,
         ErrorMessages.CANT_PAUSE_MACHINE_NOT_ON,
       );
+      this.pausing = false;
       return;
     }
     if (this.turningOff) {
@@ -167,12 +176,14 @@ export class BiscuitMachineService {
         BiscuitMachineEvents.ERROR,
         ErrorMessages.CANT_PAUSE_DURING_TURNING_OFF,
       );
+      this.pausing = false;
       return;
     }
     await this.turnOffMotor();
     this.machineState = MachineStates.PAUSED;
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, false);
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, true);
+    this.pausing = false;
   }
 
   private async turnOffOven() {

@@ -334,8 +334,26 @@ describe('Biscuit Machine (e2e)', () => {
     const error = events.find((x) => x.event === BiscuitMachineEvents.ERROR);
     expect(error.args).toEqual(ErrorMessages.CANT_TURN_ON_WHILE_TURNING_OFF);
   });
+  it(`Should emit error if turn off during turning off phase.`, async () => {
+    const events = [];
 
-  it(`Should emit error if turn on during turning off phase.`, async () => {
+    socket.onAny((event, args) => {
+      events.push({ event, args });
+    });
+
+    socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
+
+    await delay(OVEN_NEW_SPEED_PERIOD * 3);
+    await delay(MOTOR_NEW_PULSE_DURATION * 3);
+    socket.emit(BiscuitMachineEvents.TURN_OFF_MACHINE);
+    await delay(MOTOR_NEW_PULSE_DURATION * 1);
+    socket.emit(BiscuitMachineEvents.TURN_OFF_MACHINE);
+    await delay(MOTOR_NEW_PULSE_DURATION * 1);
+    const error = events.find((x) => x.event === BiscuitMachineEvents.ERROR);
+    expect(error.args).toEqual(ErrorMessages.ALREADY_TURNING_OFF);
+  });
+
+  it(`Should emit error if turn on but is already on.`, async () => {
     const events = [];
 
     socket.onAny((event, args) => {
@@ -351,5 +369,23 @@ describe('Biscuit Machine (e2e)', () => {
     await delay(MOTOR_NEW_PULSE_DURATION * 1);
     const error = events.find((x) => x.event === BiscuitMachineEvents.ERROR);
     expect(error.args).toEqual(ErrorMessages.MACHINE_IS_ALREADY_TURNED_ON);
+  });
+
+  it(`Should emit error if turn on while already turning on.`, async () => {
+    const events = [];
+
+    socket.onAny((event, args) => {
+      events.push({ event, args });
+    });
+
+    socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
+
+    await delay(OVEN_NEW_SPEED_PERIOD * 2);
+
+    socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
+
+    await delay(MOTOR_NEW_PULSE_DURATION * 1);
+    const error = events.find((x) => x.event === BiscuitMachineEvents.ERROR);
+    expect(error.args).toEqual(ErrorMessages.ALREADY_TURNING_ON);
   });
 });

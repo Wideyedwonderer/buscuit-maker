@@ -5,4 +5,6 @@ export const ErrorMessages = {
     "Machine can't be paused during turning off phase",
   MACHINE_IS_ALREADY_TURNED_ON: 'Machine is already turned on',
   CANT_TURN_ON_WHILE_TURNING_OFF: "Can't turn machine on during turn-off phase",
+  ALREADY_TURNING_OFF: 'Machine is already in turning off phase',
+  ALREADY_TURNING_ON: 'Machine is already in turning on phase',
 };

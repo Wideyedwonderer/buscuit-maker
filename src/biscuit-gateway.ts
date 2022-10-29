@@ -37,7 +37,9 @@ export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
     });
   }
   emitEvent(event: BiscuitMachineEvents, value?: any) {
-    this.latestEvents.set(event, value);
+    if (event !== BiscuitMachineEvents.ERROR) {
+      this.latestEvents.set(event, value);
+    }
     this.wss.emit(event, value);
   }
 }

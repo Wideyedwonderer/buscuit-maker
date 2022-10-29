@@ -30,6 +30,8 @@ export class BiscuitMachineService {
   private ovenHeating = false;
   private ovenCooling = false;
   private turningOff = false;
+  private turningOn = false;
+
   constructor(
     private readonly configService: ConfigService,
     private biscuitGateway: BiscuitGateway,
@@ -58,11 +60,20 @@ export class BiscuitMachineService {
   }
 
   async turnOn() {
+    if (this.turningOn) {
+      this.biscuitGateway.emitEvent(
+        BiscuitMachineEvents.ERROR,
+        ErrorMessages.ALREADY_TURNING_ON,
+      );
+      return;
+    }
+    this.turningOn = true;
     if (this.turningOff) {
       this.biscuitGateway.emitEvent(
         BiscuitMachineEvents.ERROR,
         ErrorMessages.CANT_TURN_ON_WHILE_TURNING_OFF,
       );
+      this.turningOn = false;
       return;
     }
     if (this.machineState === MachineStates.ON) {
@@ -70,6 +81,7 @@ export class BiscuitMachineService {
         BiscuitMachineEvents.ERROR,
         ErrorMessages.MACHINE_IS_ALREADY_TURNED_ON,
       );
+      this.turningOn = false;
       return;
     }
     await this.heatOven();
@@ -82,6 +94,7 @@ export class BiscuitMachineService {
       this.machineState = MachineStates.ON;
       this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, true);
     }
+    this.turningOn = false;
   }
 
   private async heatOven() {
@@ -111,6 +124,13 @@ export class BiscuitMachineService {
     return;
   }
   async turnOff() {
+    if (this.turningOff) {
+      this.biscuitGateway.emitEvent(
+        BiscuitMachineEvents.ERROR,
+        ErrorMessages.ALREADY_TURNING_OFF,
+      );
+      return;
+    }
     this.turningOff = true;
 
     if (this.machineState === MachineStates.OFF && !this.ovenHeating) {

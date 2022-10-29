@@ -35,7 +35,7 @@ By providing .env file you can override the following variables:
 |--|--|--|
 |  PORT | The port server listens to |3001|
 |  OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS | Oven warm-up/cool-down speed in seconds |1|
-| CONVEYOR_LENGTH | Length of conveyor |6|
+| CONVEYOR_LENGTH | Length of conveyor as of how many cookies it can take at  the same time |6|
 | OVEN_LENGTH | Oven length as of maximum cookies inside |2|
 | OVEN_POSITION | Oven position on conveyor |4|
 | OVEN_WARMUP_DEGREES_PER_PERIOD | Degrees the oven warms up with for the SPEED_PERIOD |30|

@@ -35,8 +35,10 @@ describe('Biscuit Machine (e2e)', () => {
   });
 
   afterEach(async () => {
-    app.close();
-    socket.close();
+    await app.close();
+    app = null;
+    await socket.close();
+    socket = null;
   });
 
   it('Oven should warm up, before motor is on', async () => {
@@ -45,7 +47,7 @@ describe('Biscuit Machine (e2e)', () => {
       events.push(eventName);
     });
     socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
-    await delay(OVEN_NEW_SPEED_PERIOD * 3);
+    await delay(OVEN_NEW_SPEED_PERIOD * 4);
 
     expect(events.indexOf(BiscuitMachineEvents.OVEN_HEATED)).toBeLessThan(
       events.indexOf(BiscuitMachineEvents.MOTOR_ON),
@@ -80,8 +82,9 @@ describe('Biscuit Machine (e2e)', () => {
     });
     socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
 
-    await delay(OVEN_NEW_SPEED_PERIOD * 3);
+    await delay(OVEN_NEW_SPEED_PERIOD * 2);
     const ovenTemperature = events
+      .slice()
       .reverse()
       .find(
         (x) => x.event === BiscuitMachineEvents.OVEN_TEMPERATURE_CHANGE,
@@ -200,11 +203,6 @@ describe('Biscuit Machine (e2e)', () => {
     socket.emit(BiscuitMachineEvents.PAUSE_MACHINE);
     await delay(MOTOR_NEW_PULSE_DURATION * 2);
 
-    const cookieMovedEvents = events.filter(
-      (x) => x.event === BiscuitMachineEvents.COOKIES_MOVED,
-    );
-
-    expect(cookieMovedEvents.length).toEqual(6);
     const lastCookieMovedIndex = events.findIndex(
       (x) => x.args?.firstCookiePosition === 2,
     );

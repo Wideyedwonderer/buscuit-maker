@@ -118,6 +118,7 @@ export class BiscuitMachineService {
         BiscuitMachineEvents.ERROR,
         ErrorMessages.MACHINE_IS_ALREADY_OFF,
       );
+      this.turningOff = false;
       return;
     }
 
@@ -181,7 +182,8 @@ export class BiscuitMachineService {
     this.motorState = MotorStates.ON;
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MOTOR_ON, true);
     while (this.shouldPulse()) {
-      await delay(this.MOTOR_PULSE_DURATION_SECONDS);
+      await delay(this.MOTOR_PULSE_DURATION_SECONDS / 2);
+
       if (this.shouldPulse()) {
         await this.pulse();
       }
@@ -196,11 +198,13 @@ export class BiscuitMachineService {
       await this.terminateConveyor();
     }
     this.motorState = MotorStates.OFF;
+    await delay(this.MOTOR_PULSE_DURATION_SECONDS);
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MOTOR_ON, false);
   }
 
-  private pulse() {
+  private async pulse() {
     this.extrude();
+    await delay(this.MOTOR_PULSE_DURATION_SECONDS / 2);
     this.moveConveyor();
   }
 

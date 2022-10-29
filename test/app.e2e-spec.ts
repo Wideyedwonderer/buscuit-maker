@@ -198,13 +198,13 @@ describe('Biscuit Machine (e2e)', () => {
     await delay(OVEN_NEW_SPEED_PERIOD * 3);
     await delay(MOTOR_NEW_PULSE_DURATION * 2);
     socket.emit(BiscuitMachineEvents.PAUSE_MACHINE);
-    await delay(MOTOR_NEW_PULSE_DURATION * 1);
+    await delay(MOTOR_NEW_PULSE_DURATION * 2);
 
     const cookieMovedEvents = events.filter(
       (x) => x.event === BiscuitMachineEvents.COOKIES_MOVED,
     );
 
-    expect(cookieMovedEvents.length).toEqual(4);
+    expect(cookieMovedEvents.length).toEqual(6);
     const lastCookieMovedIndex = events.findIndex(
       (x) => x.args?.firstCookiePosition === 2,
     );

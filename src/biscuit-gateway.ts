@@ -7,7 +7,10 @@ import {
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { BiscuitMachineService } from './biscuit-machine.service';
-import { BiscuitMachineEvents } from './enum/biscuit-events';
+import {
+  BiscuitMachineEvents,
+  BuscuitMachineEventPayloadTypes,
+} from 'biscuit-machine-commons';
 
 @WebSocketGateway({ namespace: '/biscuit', cors: true })
 export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
@@ -36,7 +39,10 @@ export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
       });
     });
   }
-  emitEvent(event: BiscuitMachineEvents, value?: any) {
+  emitEvent<T extends BiscuitMachineEvents>(
+    event: T,
+    value?: BuscuitMachineEventPayloadTypes[T],
+  ) {
     if (event !== BiscuitMachineEvents.ERROR) {
       this.latestEvents.set(event, value);
     }

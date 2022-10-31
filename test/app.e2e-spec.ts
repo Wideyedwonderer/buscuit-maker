@@ -4,8 +4,7 @@ import { BiscuitModule } from '../src/biscuit.module';
 import * as io from 'socket.io-client';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { delay } from '../src/utils';
-import { BiscuitMachineEvents } from '../src/enum/biscuit-events';
-import { ErrorMessages } from '../src/errors/error-messages';
+import { BiscuitMachineEvents, ErrorMessages } from 'biscuit-machine-commons';
 
 jest.setTimeout(7000);
 const OVEN_NEW_SPEED_PERIOD = 0.1;

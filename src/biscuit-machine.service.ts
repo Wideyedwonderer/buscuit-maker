@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BiscuitGateway } from './biscuit-gateway';
-import { BiscuitMachineEvents } from './enum/biscuit-events';
+import { BiscuitMachineEvents, ErrorMessages } from 'biscuit-machine-commons';
 import { MachineStates } from './enum/machine-states.enum';
 import { MotorStates } from './enum/motor-states.enum';
-import { ErrorMessages } from './errors/error-messages';
 import { delay } from './utils';
 
 @Injectable()

@@ -4,12 +4,13 @@ import { BiscuitModule } from '../src/biscuit.module';
 import * as io from 'socket.io-client';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { delay } from '../src/utils';
-import { BiscuitMachineEvents } from '../src/enum/biscuit-events';
-import { ErrorMessages } from '../src/errors/error-messages';
+import { BiscuitMachineEvents, ErrorMessages } from 'biscuit-machine-commons';
 
-jest.setTimeout(7000);
+jest.setTimeout(6000);
 const OVEN_NEW_SPEED_PERIOD = 0.1;
 const MOTOR_NEW_PULSE_DURATION = 0.1;
+const CONVEYOR_LENGTH = +process.env.CONVEYOR_LENGTH || 6;
+
 describe('Biscuit Machine (e2e)', () => {
   let app: INestApplication;
   let socket: io.Socket;
@@ -166,7 +167,7 @@ describe('Biscuit Machine (e2e)', () => {
     socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
 
     await delay(OVEN_NEW_SPEED_PERIOD * 3);
-    await delay(MOTOR_NEW_PULSE_DURATION * 7);
+    await delay(MOTOR_NEW_PULSE_DURATION * (CONVEYOR_LENGTH + 1));
 
     const cookieMovedEvents = events.filter(
       (x) => x.event === BiscuitMachineEvents.COOKIES_MOVED,
@@ -223,7 +224,7 @@ describe('Biscuit Machine (e2e)', () => {
     socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
 
     await delay(OVEN_NEW_SPEED_PERIOD * 3);
-    await delay(MOTOR_NEW_PULSE_DURATION * 7);
+    await delay(MOTOR_NEW_PULSE_DURATION * (CONVEYOR_LENGTH + 1));
 
     const cookieCookedEvents = events.filter(
       (x) => x.event === BiscuitMachineEvents.COOKIE_COOKED,
@@ -265,7 +266,7 @@ describe('Biscuit Machine (e2e)', () => {
     await delay(OVEN_NEW_SPEED_PERIOD * 3);
     await delay(MOTOR_NEW_PULSE_DURATION * 3);
     socket.emit(BiscuitMachineEvents.TURN_OFF_MACHINE);
-    await delay(MOTOR_NEW_PULSE_DURATION * 8);
+    await delay(MOTOR_NEW_PULSE_DURATION * (CONVEYOR_LENGTH + 2));
     const lastCookieMovedEventIndex = events.findIndex(
       (x) => x?.args.firstCookiePosition === -1,
     );
@@ -385,5 +386,61 @@ describe('Biscuit Machine (e2e)', () => {
     await delay(MOTOR_NEW_PULSE_DURATION * 1);
     const error = events.find((x) => x.event === BiscuitMachineEvents.ERROR);
     expect(error.args).toEqual(ErrorMessages.ALREADY_TURNING_ON);
+  });
+
+  it(`Should emit warning about burned cookies when paused and has cookies in oven.`, async () => {
+    const events = [];
+
+    socket.onAny((event, args) => {
+      events.push({ event, args });
+    });
+
+    socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
+
+    await delay(OVEN_NEW_SPEED_PERIOD * 3);
+    await delay(MOTOR_NEW_PULSE_DURATION * CONVEYOR_LENGTH);
+    socket.emit(BiscuitMachineEvents.PAUSE_MACHINE);
+
+    await delay(OVEN_NEW_SPEED_PERIOD * 4);
+
+    const error = events.find((x) => x.event === BiscuitMachineEvents.WARNING);
+    expect(error.args).toEqual(ErrorMessages.COOKIES_WILL_BURN);
+  });
+
+  it(`Should not emit warning about burned cookies when paused and has NO cookies in oven.`, async () => {
+    const events = [];
+
+    socket.onAny((event, args) => {
+      events.push({ event, args });
+    });
+
+    socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
+
+    await delay(OVEN_NEW_SPEED_PERIOD * 3);
+    await delay(MOTOR_NEW_PULSE_DURATION);
+    socket.emit(BiscuitMachineEvents.PAUSE_MACHINE);
+
+    await delay(OVEN_NEW_SPEED_PERIOD * 2);
+
+    const error = events.find((x) => x.event === BiscuitMachineEvents.WARNING);
+    expect(error).toBeFalsy();
+  });
+
+  it(`Should initiate emergancy turn-off when cookies are burned.`, async () => {
+    const events = [];
+
+    socket.onAny((event, args) => {
+      events.push({ event, args });
+    });
+
+    socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
+
+    await delay(OVEN_NEW_SPEED_PERIOD * 3);
+    await delay(MOTOR_NEW_PULSE_DURATION * CONVEYOR_LENGTH);
+    socket.emit(BiscuitMachineEvents.PAUSE_MACHINE);
+
+    await delay(OVEN_NEW_SPEED_PERIOD * 10);
+    const error = events.find((x) => x.event === BiscuitMachineEvents.ERROR);
+    expect(error.args).toEqual(ErrorMessages.EMERGANCY_TURN_OFF_INITIATED);
   });
 });

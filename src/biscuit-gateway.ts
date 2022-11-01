@@ -7,14 +7,26 @@ import {
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { BiscuitMachineService } from './biscuit-machine.service';
-import { BiscuitMachineEvents } from './enum/biscuit-events';
+import {
+  BiscuitMachineEvents,
+  BuscuitMachineEventPayloadTypes,
+} from 'biscuit-machine-commons';
+import { ConfigService } from '@nestjs/config';
 
 @WebSocketGateway({ namespace: '/biscuit', cors: true })
 export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
+  private CONVEYOR_LENGTH;
+  private OVEN_LENGTH;
+  private OVEN_POSITION;
   constructor(
     @Inject(forwardRef(() => BiscuitMachineService))
     private readonly biscuitService: BiscuitMachineService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.CONVEYOR_LENGTH = +configService.get('CONVEYOR_LENGTH');
+    this.OVEN_LENGTH = +configService.get('OVEN_LENGTH');
+    this.OVEN_POSITION = +configService.get('OVEN_POSITION');
+  }
   handleConnection(client: any, ...args: any[]) {
     for (const [key, value] of this.latestEvents) {
       this.wss.to(client.id).emit(key, value);
@@ -34,10 +46,21 @@ export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
       socket.on(BiscuitMachineEvents.PAUSE_MACHINE, async () => {
         return this.biscuitService.pause();
       });
+      socket.emit(BiscuitMachineEvents.INITIAL_CONFIG, {
+        ovenLength: this.OVEN_LENGTH,
+        conveyorLength: this.CONVEYOR_LENGTH,
+        ovenPosition: this.OVEN_POSITION,
+      });
     });
   }
-  emitEvent(event: BiscuitMachineEvents, value?: any) {
-    if (event !== BiscuitMachineEvents.ERROR) {
+  emitEvent<T extends BiscuitMachineEvents>(
+    event: T,
+    value?: BuscuitMachineEventPayloadTypes[T],
+  ) {
+    if (
+      event !== BiscuitMachineEvents.ERROR &&
+      event !== BiscuitMachineEvents.WARNING
+    ) {
       this.latestEvents.set(event, value);
     }
     this.wss.emit(event, value);

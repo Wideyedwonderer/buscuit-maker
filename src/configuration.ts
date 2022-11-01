@@ -4,7 +4,7 @@ export default async () => {
   const schema = Joi.object({
     OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS: Joi.number().min(0).required(),
     CONVEYOR_LENGTH: Joi.number().min(5).required(),
-    OVEN_LENGTH: Joi.number().min(2).required(),
+    OVEN_LENGTH: Joi.number().min(2).max(5).required(),
     OVEN_POSITION: Joi.number().min(3).required(),
     OVEN_WARMUP_DEGREES_PER_PERIOD: Joi.number().min(1).required(),
     OVEN_COOL_DOWN_DEGREES_PER_PERIOD: Joi.number().min(1).required(),
@@ -38,6 +38,21 @@ export default async () => {
 
   if (error) {
     throw new Error('Config validation error! ' + error.message);
+  }
+  if (config.OVEN_LENGTH > config.CONVEYOR_LENGTH - 2) {
+    throw new Error(
+      `Config validation error! OVEN_LENGTH must be maximum ${
+        config.CONVEYOR_LENGTH - 2
+      } with CONVEYOR_LENGTH of ${config.CONVEYOR_LENGTH}`,
+    );
+  }
+
+  if (config.OVEN_POSITION + config.OVEN_LENGTH > config.CONVEYOR_LENGTH) {
+    throw new Error(
+      `Config validation error! OVEN_POSITION must be maximum ${
+        config.CONVEYOR_LENGTH - config.OVEN_LENGTH
+      } with current CONVEYOR_LENGTH and OVEN_LENGTH`,
+    );
   }
   return config;
 };

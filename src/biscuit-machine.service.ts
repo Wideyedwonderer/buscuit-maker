@@ -24,6 +24,8 @@ export class BiscuitMachineService {
 
   private firstCookiePosition = -1;
   private lastCookiePosition = -1;
+  private firstBurnedCookiePosition = -1;
+  private lastBurnedCookiePosition = -1;
   private cookedCookiesAmount = 0;
 
   private ovenHeating = false;
@@ -183,6 +185,9 @@ export class BiscuitMachineService {
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, false);
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, true);
     this.pausing = false;
+    if (this.cookiesInOven) {
+      this.burningCookiesSafetyProcedure();
+    }
   }
 
   private async turnOffOven() {
@@ -220,9 +225,11 @@ export class BiscuitMachineService {
     }
     return;
   }
+
   private shouldPulse() {
     return this.motorState === MotorStates.ON && this.turningOff === false;
   }
+
   private async turnOffMotor(terminate = false) {
     if (terminate) {
       await this.terminateConveyor();
@@ -248,6 +255,8 @@ export class BiscuitMachineService {
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.COOKIES_MOVED, {
       lastCookiePosition: this.lastCookiePosition,
       firstCookiePosition: this.firstCookiePosition,
+      firstBurnedCookiePosition: this.firstBurnedCookiePosition,
+      lastBurnedCookiePosition: this.lastBurnedCookiePosition,
     });
   }
 
@@ -256,14 +265,22 @@ export class BiscuitMachineService {
       return;
     }
 
-    if (this.firstCookiePosition === this.CONVEYOR_LENGTH - 1) {
+    if (
+      this.firstCookiePosition === this.CONVEYOR_LENGTH - 1 &&
+      this.firstBurnedCookiePosition !== this.firstCookiePosition
+    ) {
       this.cookedCookiesAmount += 1;
       this.biscuitGateway.emitEvent(
         BiscuitMachineEvents.COOKIE_COOKED,
         this.cookedCookiesAmount,
       );
     } else {
-      this.firstCookiePosition += 1;
+      if (
+        this.firstCookiePosition !== -1 &&
+        this.firstCookiePosition < this.CONVEYOR_LENGTH - 1
+      ) {
+        this.firstCookiePosition += 1;
+      }
     }
     if (this.lastCookiePosition === this.CONVEYOR_LENGTH - 1) {
       this.lastCookiePosition = -1;
@@ -272,9 +289,26 @@ export class BiscuitMachineService {
       this.lastCookiePosition += 1;
     }
 
+    if (this.lastBurnedCookiePosition === this.CONVEYOR_LENGTH - 1) {
+      this.lastBurnedCookiePosition = -1;
+      this.firstBurnedCookiePosition = -1;
+    } else {
+      if (this.lastBurnedCookiePosition !== -1) {
+        this.lastBurnedCookiePosition += 1;
+      }
+      if (
+        this.firstBurnedCookiePosition !== -1 &&
+        this.firstBurnedCookiePosition < this.CONVEYOR_LENGTH - 1
+      ) {
+        this.firstBurnedCookiePosition += 1;
+      }
+    }
+
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.COOKIES_MOVED, {
       lastCookiePosition: this.lastCookiePosition,
       firstCookiePosition: this.firstCookiePosition,
+      firstBurnedCookiePosition: this.firstBurnedCookiePosition,
+      lastBurnedCookiePosition: this.lastBurnedCookiePosition,
     });
   }
 
@@ -286,5 +320,75 @@ export class BiscuitMachineService {
       this.moveConveyor();
       await delay(this.MOTOR_PULSE_DURATION_SECONDS);
     }
+  }
+
+  private async burningCookiesSafetyProcedure() {
+    await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS * 2);
+    this.biscuitGateway.emitEvent(
+      BiscuitMachineEvents.WARNING,
+      ErrorMessages.COOKIES_WILL_BURN,
+    );
+    if (this.machineState !== MachineStates.PAUSED) {
+      return;
+    }
+    await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS * 2);
+    this.biscuitGateway.emitEvent(
+      BiscuitMachineEvents.WARNING,
+      ErrorMessages.COOKIES_WILL_BECOME_BRICKS_SOON,
+    );
+    if (this.machineState !== MachineStates.PAUSED) {
+      return;
+    }
+    await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS * 2);
+    this.biscuitGateway.emitEvent(
+      BiscuitMachineEvents.WARNING,
+      ErrorMessages.COOKIES_WILL_BURN_LAST_WARNING,
+    );
+    if (this.machineState !== MachineStates.PAUSED) {
+      return;
+    }
+    await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS * 2);
+    if (this.machineState !== MachineStates.PAUSED) {
+      return;
+    }
+    this.biscuitGateway.emitEvent(
+      BiscuitMachineEvents.ERROR,
+      ErrorMessages.EMERGANCY_TURN_OFF_INITIATED,
+    );
+
+    this.firstBurnedCookiePosition = Math.min(
+      this.ovenEndIndex(),
+      this.firstCookiePosition,
+    );
+
+    this.lastBurnedCookiePosition = Math.max(
+      this.ovenStartIndex(),
+      this.lastCookiePosition,
+    );
+
+    this.biscuitGateway.emitEvent(BiscuitMachineEvents.COOKIES_MOVED, {
+      lastCookiePosition: this.lastCookiePosition,
+      firstCookiePosition: this.firstCookiePosition,
+      firstBurnedCookiePosition: this.firstBurnedCookiePosition,
+      lastBurnedCookiePosition: this.lastBurnedCookiePosition,
+    });
+
+    if (this.machineState === MachineStates.PAUSED) {
+      this.turnOff();
+    }
+  }
+  private cookiesInOven() {
+    return (
+      this.firstCookiePosition >= this.ovenStartIndex() ||
+      this.lastCookiePosition <= this.ovenEndIndex()
+    );
+  }
+
+  private ovenStartIndex() {
+    return this.OVEN_POSITION - 1;
+  }
+
+  private ovenEndIndex() {
+    return this.OVEN_POSITION - 1 + this.OVEN_LENGTH - 1;
   }
 }

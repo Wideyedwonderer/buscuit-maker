@@ -18,6 +18,7 @@ export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
   private CONVEYOR_LENGTH;
   private OVEN_LENGTH;
   private OVEN_POSITION;
+  private MOTOR_PULSE_DURATION_SECONDS;
   constructor(
     @Inject(forwardRef(() => BiscuitMachineService))
     private readonly biscuitService: BiscuitMachineService,
@@ -26,8 +27,11 @@ export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
     this.CONVEYOR_LENGTH = +configService.get('CONVEYOR_LENGTH');
     this.OVEN_LENGTH = +configService.get('OVEN_LENGTH');
     this.OVEN_POSITION = +configService.get('OVEN_POSITION');
+    this.MOTOR_PULSE_DURATION_SECONDS = +configService.get(
+      'MOTOR_PULSE_DURATION_SECONDS',
+    );
   }
-  handleConnection(client: any, ...args: any[]) {
+  handleConnection(client: any) {
     for (const [key, value] of this.latestEvents) {
       this.wss.to(client.id).emit(key, value);
     }
@@ -50,6 +54,7 @@ export class BiscuitGateway implements OnGatewayInit, OnGatewayConnection {
         ovenLength: this.OVEN_LENGTH,
         conveyorLength: this.CONVEYOR_LENGTH,
         ovenPosition: this.OVEN_POSITION,
+        motorPulseDurationSeconds: this.MOTOR_PULSE_DURATION_SECONDS,
       });
     });
   }

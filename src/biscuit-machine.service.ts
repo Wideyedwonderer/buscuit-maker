@@ -217,7 +217,7 @@ export class BiscuitMachineService {
     this.motorState = MotorStates.ON;
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MOTOR_ON, true);
     while (this.shouldPulse()) {
-      await delay(this.MOTOR_PULSE_DURATION_SECONDS / 2);
+      await delay(this.MOTOR_PULSE_DURATION_SECONDS);
 
       if (this.shouldPulse()) {
         await this.pulse();
@@ -235,13 +235,13 @@ export class BiscuitMachineService {
       await this.terminateConveyor();
     }
     this.motorState = MotorStates.OFF;
-    await delay(this.MOTOR_PULSE_DURATION_SECONDS);
+    await delay(this.MOTOR_PULSE_DURATION_SECONDS / 2);
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MOTOR_ON, false);
   }
 
   private async pulse() {
     this.extrude();
-    await delay(this.MOTOR_PULSE_DURATION_SECONDS / 2);
+    // await delay(this.MOTOR_PULSE_DURATION_SECONDS / 2);
     this.moveConveyor();
   }
 
@@ -318,7 +318,7 @@ export class BiscuitMachineService {
       this.lastCookiePosition !== -1
     ) {
       this.moveConveyor();
-      await delay(this.MOTOR_PULSE_DURATION_SECONDS);
+      await delay(this.MOTOR_PULSE_DURATION_SECONDS / 2);
     }
   }
 
@@ -328,7 +328,7 @@ export class BiscuitMachineService {
       BiscuitMachineEvents.WARNING,
       ErrorMessages.COOKIES_WILL_BURN,
     );
-    if (this.machineState !== MachineStates.PAUSED) {
+    if (!this.shouldContinueBurnedCookiesProcedure()) {
       return;
     }
     await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS * 2);
@@ -336,7 +336,7 @@ export class BiscuitMachineService {
       BiscuitMachineEvents.WARNING,
       ErrorMessages.COOKIES_WILL_BECOME_BRICKS_SOON,
     );
-    if (this.machineState !== MachineStates.PAUSED) {
+    if (!this.shouldContinueBurnedCookiesProcedure()) {
       return;
     }
     await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS * 2);
@@ -344,11 +344,11 @@ export class BiscuitMachineService {
       BiscuitMachineEvents.WARNING,
       ErrorMessages.COOKIES_WILL_BURN_LAST_WARNING,
     );
-    if (this.machineState !== MachineStates.PAUSED) {
+    if (!this.shouldContinueBurnedCookiesProcedure()) {
       return;
     }
     await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS * 2);
-    if (this.machineState !== MachineStates.PAUSED) {
+    if (!this.shouldContinueBurnedCookiesProcedure()) {
       return;
     }
     this.biscuitGateway.emitEvent(
@@ -372,11 +372,15 @@ export class BiscuitMachineService {
       firstBurnedCookiePosition: this.firstBurnedCookiePosition,
       lastBurnedCookiePosition: this.lastBurnedCookiePosition,
     });
+    await delay(this.OVEN_SPEED_PERIOD_LENGTH_IN_SECONDS * 2);
 
-    if (this.machineState === MachineStates.PAUSED) {
+    if (this.shouldContinueBurnedCookiesProcedure()) {
       this.turnOff();
     }
   }
+  private shouldContinueBurnedCookiesProcedure = () =>
+    this.machineState === MachineStates.PAUSED && !this.turningOff;
+
   private cookiesInOven() {
     return (
       this.firstCookiePosition >= this.ovenStartIndex() ||

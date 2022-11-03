@@ -54,5 +54,14 @@ export default async () => {
       } with current CONVEYOR_LENGTH and OVEN_LENGTH`,
     );
   }
+
+  if (
+    config.DESIRED_MAXIMUM_OVEN_TEMPERATURE <
+    config.DESIRED_MININUM_OVEN_TEMPERATURE
+  ) {
+    throw new Error(
+      `Config validation error! DESIRED_MAXIMUM_OVEN_TEMPERATURE must be higher than DESIRED_MININUM_OVEN_TEMPERATURE.`,
+    );
+  }
   return config;
 };

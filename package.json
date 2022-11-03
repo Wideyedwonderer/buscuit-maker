@@ -36,7 +36,7 @@
     "rimraf": "^3.0.2",
     "rxjs": "^7.2.0",
     "socket.io-client": "^4.5.3",
-    "biscuit-machine-commons": "1.0.5"
+    "biscuit-machine-commons": "1.0.6"
   },
   "devDependencies": {
     "@nestjs/cli": "^9.0.0",

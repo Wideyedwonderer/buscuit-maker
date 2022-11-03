@@ -224,7 +224,7 @@ describe('Biscuit Machine (e2e)', () => {
     socket.emit(BiscuitMachineEvents.TURN_ON_MACHINE);
 
     await delay(OVEN_NEW_SPEED_PERIOD * 3);
-    await delay(MOTOR_NEW_PULSE_DURATION * (CONVEYOR_LENGTH + 1));
+    await delay(MOTOR_NEW_PULSE_DURATION * (CONVEYOR_LENGTH + 2));
 
     const cookieCookedEvents = events.filter(
       (x) => x.event === BiscuitMachineEvents.COOKIE_COOKED,
@@ -245,7 +245,7 @@ describe('Biscuit Machine (e2e)', () => {
     await delay(OVEN_NEW_SPEED_PERIOD * 3);
     await delay(MOTOR_NEW_PULSE_DURATION * 3);
     socket.emit(BiscuitMachineEvents.TURN_OFF_MACHINE);
-    await delay(MOTOR_NEW_PULSE_DURATION * 8);
+    await delay(MOTOR_NEW_PULSE_DURATION * CONVEYOR_LENGTH);
     const lastCookieMovedEvent = events
       .filter((x) => x.event === BiscuitMachineEvents.COOKIES_MOVED)
       .reverse()[0];

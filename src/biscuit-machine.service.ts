@@ -185,7 +185,7 @@ export class BiscuitMachineService {
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_ON, false);
     this.biscuitGateway.emitEvent(BiscuitMachineEvents.MACHINE_PAUSED, true);
     this.pausing = false;
-    if (this.cookiesInOven) {
+    if (this.cookiesInOven()) {
       this.burningCookiesSafetyProcedure();
     }
   }
@@ -382,8 +382,12 @@ export class BiscuitMachineService {
     this.machineState === MachineStates.PAUSED && !this.turningOff;
 
   private cookiesInOven() {
+    console.log('check if cookies');
+    console.log(this.lastCookiePosition);
+    console.log(this.firstCookiePosition);
+
     return (
-      this.firstCookiePosition >= this.ovenStartIndex() ||
+      this.firstCookiePosition >= this.ovenStartIndex() &&
       this.lastCookiePosition <= this.ovenEndIndex()
     );
   }
